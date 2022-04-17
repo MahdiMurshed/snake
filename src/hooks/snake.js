@@ -1,26 +1,17 @@
-import { useCallback, useState, useEffect, useMemo } from "react";
-import { useInterval } from "./interval";
-import { getDefaultSnake, getRandomCell } from "../helpers";
-import { Direction, CellType, Config } from "../constants";
+import { useCallback, useMemo } from "react";
+import { getRandomCell } from "../helpers";
+import { CellType, Config } from "../constants";
 import { Cell } from "../components/Cell";
+import { useGameContext } from "../context/game";
 
 export const useSnake = () => {
-  const [snake, setSnake] = useState(getDefaultSnake());
-  const [direction, setDirection] = useState(Direction.Right);
-  const [object, setObject] = useState([]);
-
-  const score = snake.length - 3;
-
-  const resetGame = useCallback(() => {
-    setSnake(getDefaultSnake());
-    setDirection(Direction.Right);
-    setObject([]);
-  }, []);
+  const { setObject, object, snake, setSnake, resetGame, direction } =
+    useGameContext();
 
   //helper function for removing object
   const removeObject = useCallback(() => {
     setObject((o) => o.filter((f) => Date.now() - f.createdAt <= 10 * 1000));
-  }, []);
+  }, [setObject]);
 
   const isObject = useCallback(
     ({ x, y }) => object.find((obj) => obj.x === x && obj.y === y),
@@ -43,25 +34,7 @@ export const useSnake = () => {
     (cell) => isSnake(cell) || isObject(cell),
     [isObject, isSnake]
   );
-  //helper function for adding new food
-  // const addNewFood = useCallback(() => {
-  //   let newFood = getRandomCell();
-  //   while (isOccupied(newFood)) {
-  //     newFood = getRandomCell();
-  //   }
 
-  //   setFoods((fs) => [...fs, newFood]);
-  // }, [isOccupied]);
-
-  //helper function for adding new food
-  // const addNewPoison = useCallback(() => {
-  //   let newPoison = getRandomCell();
-  //   while (isOccupied(newPoison)) {
-  //     newPoison = getRandomCell();
-  //   }
-
-  //   setPoison((fs) => [...fs, newPoison]);
-  // }, [isOccupied]);
   const addNewObject = useCallback(
     (type) => {
       let newobject = getRandomCell();
@@ -76,7 +49,7 @@ export const useSnake = () => {
         },
       ]);
     },
-    [isOccupied]
+    [isOccupied, setObject]
   );
 
   // move the snake
@@ -132,45 +105,31 @@ export const useSnake = () => {
 
       return newSnake;
     });
-  }, [direction, isCellContainsObjectOfType, isSnake, resetGame]);
+  }, [
+    direction.x,
+    direction.y,
+    isCellContainsObjectOfType,
+    isSnake,
+    resetGame,
+    setObject,
+    setSnake,
+  ]);
 
-  useInterval(runSingleStep, 200);
-  useInterval(() => addNewObject(CellType.Food), 3000);
-  useInterval(() => addNewObject(CellType.Poison), 5000);
-  useInterval(() => removeObject(), 100);
+  return {
+    object,
+    isCellContainsObjectOfType,
+    removeObject,
+    isSnake,
+    isObject,
+    isOccupied,
+    runSingleStep,
+    addNewObject,
+  };
+};
 
-  useEffect(() => {
-    const handleKey = (direction, oppositeDirection) => {
-      setDirection((currDir) => {
-        if (currDir !== oppositeDirection) {
-          return direction;
-        }
-        return currDir;
-      });
-    };
-    const handleNavigation = (event) => {
-      switch (event.key) {
-        case "ArrowUp":
-          handleKey(Direction.Top, Direction.Bottom);
-          break;
+export const useCells = () => {
+  const { isCellContainsObjectOfType, isSnake, object } = useSnake();
 
-        case "ArrowDown":
-          handleKey(Direction.Bottom, Direction.Top);
-          break;
-
-        case "ArrowLeft":
-          handleKey(Direction.Left, Direction.Right);
-          break;
-
-        case "ArrowRight":
-          handleKey(Direction.Right, Direction.Left);
-          break;
-      }
-    };
-    window.addEventListener("keydown", handleNavigation);
-
-    return () => window.removeEventListener("keydown", handleNavigation);
-  }, []);
   const cells = useMemo(() => {
     const elements = [];
     for (let x = 0; x < Config.width; x++) {
@@ -209,6 +168,5 @@ export const useSnake = () => {
     }
     return elements;
   }, [isCellContainsObjectOfType, isSnake, object]);
-
-  return { score, isCellContainsObjectOfType, isSnake, cells };
+  return cells;
 };

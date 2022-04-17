@@ -1,6 +1,6 @@
 import dynamic from "next/dynamic";
-import { Snake } from "../src/components/Snake";
+import Game from "../src/components/Game";
 
-export default dynamic(() => Promise.resolve(Snake), {
+export default dynamic(() => Promise.resolve(Game), {
   ssr: false,
 });
